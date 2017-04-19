@@ -1,6 +1,8 @@
 package com.github.data;
 
 
+import com.github.git.PatchStatistics;
+import com.github.git.Patches;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
@@ -25,7 +27,6 @@ public class GitHubIssuesLoader {
 
     public List<LabeledPoint> getDataTraining(String owner, String repo) throws Exception {
         GitHubClient client = new GitHubClient();
-        
         IssueService srv = new IssueService(client);
         CommitService commitsSrv = new CommitService(client);
 
@@ -55,6 +56,7 @@ public class GitHubIssuesLoader {
 
             int additions = 0;
             int deletions = 0;
+            int modifications = 0;
 
             int addedFiles = 0;
             int modifiedFiles = 0;
@@ -73,12 +75,20 @@ public class GitHubIssuesLoader {
                         if(commit != null) {
                             try {
                                 RepositoryCommit repoCommit = commitsSrv.getCommit(repository, commit);
-                                CommitStats cstats = repoCommit.getStats();
-                                additions += cstats.getAdditions();
-                                deletions += cstats.getDeletions();
+
                                 List<CommitFile> commitFiles = repoCommit.getFiles();
 
                                 for(CommitFile cfile: commitFiles){
+
+                                    String patch = cfile.getPatch();
+
+                                    if(patch != null ) {
+
+                                        PatchStatistics ps = Patches.getPatchStatistics(patch);
+                                        additions +=ps.getAdditions();
+                                        deletions +=ps.getDeletions();
+                                        modifications += ps.getModifications();
+                                    }
 
                                     String status = cfile.getStatus();
 
@@ -104,7 +114,7 @@ public class GitHubIssuesLoader {
 
             if(additions > 0 || deletions > 0) {
                 dataTraining.add(new LabeledPoint(rowLabel,
-                        new DenseVector(new double[]{additions, deletions, modifiedFiles, addedFiles, removedFiles})));
+                        new DenseVector(new double[]{additions, deletions, modifications, modifiedFiles, addedFiles, removedFiles})));
             }
             index++;
             if(index % 10 == 0){
@@ -187,8 +197,8 @@ public class GitHubIssuesLoader {
 
     public static void main(String[] args) throws Exception {
         GitHubIssuesLoader loader = new GitHubIssuesLoader();
-        //List<LabeledPoint> rows = loader.getDataTraining("ReactiveX", "RxJava");
-        //loader.write(rows);
-        analysis();
+        List<LabeledPoint> rows = loader.getDataTraining("ReactiveX", "RxJava");
+        loader.write(rows);
+        //analysis();
     }
 }
