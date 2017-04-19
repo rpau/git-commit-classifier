@@ -1,0 +1,127 @@
+From fb25329e0d9ec5d632667df393f7c1b25a698e68 Mon Sep 17 00:00:00 2001
+From: Sergey <sergey.gorbaty@salesforce.com>
+Date: Fri, 13 Jan 2017 14:06:08 -0800
+Subject: [PATCH] Bug fix to improve detection of concatenated vars
+
+---
+ .../apex/rule/security/ApexSOQLInjectionRule.java  | 27 +++++++++++++---------
+ .../apex/rule/security/xml/ApexSOQLInjection.xml   | 19 ++++++++++++++-
+ 2 files changed, 34 insertions(+), 12 deletions(-)
+
+diff --git a/pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/rule/security/ApexSOQLInjectionRule.java b/pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/rule/security/ApexSOQLInjectionRule.java
+index 04e581b..e45036f 100644
+--- a/pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/rule/security/ApexSOQLInjectionRule.java
++++ b/pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/rule/security/ApexSOQLInjectionRule.java
+@@ -33,9 +33,9 @@
+     private static final String STRING = "String";
+     private static final String DATABASE = "Database";
+     private static final String QUERY = "query";
++    private static final Pattern SELECT_PATTERN = Pattern.compile("^select[\\s]+?.*?$", Pattern.CASE_INSENSITIVE);
+     private final HashSet<String> safeVariables = new HashSet<>();
+     private final HashMap<String, Boolean> selectContainingVariables = new HashMap<>();
+-    private static final Pattern pattern = Pattern.compile("^select[\\s]+?.+?$", Pattern.CASE_INSENSITIVE);
+
+     public ApexSOQLInjectionRule() {
+         setProperty(CODECLIMATE_CATEGORIES, new String[] { "Security" });
+@@ -50,13 +50,6 @@ public Object visit(ASTUserClass node, Object data) {
+             return data;
+         }
+
+-        // baz = String.escapeSignleQuotes(...);
+-        final List<ASTAssignmentExpression> assignmentCalls = node.findDescendantsOfType(ASTAssignmentExpression.class);
+-        for (ASTAssignmentExpression a : assignmentCalls) {
+-            findSanitizedVariables(a);
+-            findSelectContainingVariables(a);
+-        }
+-
+         final List<ASTFieldDeclaration> fieldExpr = node.findDescendantsOfType(ASTFieldDeclaration.class);
+         for (ASTFieldDeclaration a : fieldExpr) {
+             findSanitizedVariables(a);
+@@ -70,6 +63,13 @@ public Object visit(ASTUserClass node, Object data) {
+             findSelectContainingVariables(a);
+         }
+
++        // baz = String.escapeSignleQuotes(...);
++        final List<ASTAssignmentExpression> assignmentCalls = node.findDescendantsOfType(ASTAssignmentExpression.class);
++        for (ASTAssignmentExpression a : assignmentCalls) {
++            findSanitizedVariables(a);
++            findSelectContainingVariables(a);
++        }
++
+         // Database.query(...) check
+         final List<ASTMethodCallExpression> potentialDbQueryCalls = node
+                 .findDescendantsOfType(ASTMethodCallExpression.class);
+@@ -80,7 +80,7 @@ public Object visit(ASTUserClass node, Object data) {
+                 reportVariables(m, data);
+             }
+         }
+-
++
+         safeVariables.clear();
+         selectContainingVariables.clear();
+
+@@ -97,7 +97,7 @@ private void findSanitizedVariables(AbstractApexNode<?> node) {
+             if (left != null) {
+                 Object o = literal.getNode().getLiteral();
+                 if (o instanceof String) {
+-                    if (pattern.matcher((String) o).matches()) {
++                    if (SELECT_PATTERN.matcher((String) o).matches()) {
+                         selectContainingVariables.put(Helper.getFQVariableName(left), Boolean.TRUE);
+                     } else {
+                         safeVariables.add(Helper.getFQVariableName(left));
+@@ -144,14 +144,19 @@ private void recursivelyCheckForSelect(final ASTVariableExpression var, final AS
+
+             Object o = literal.getNode().getLiteral();
+             if (o instanceof String) {
+-                if (pattern.matcher((String) o).matches()) {
++                if (SELECT_PATTERN.matcher((String) o).matches()) {
+                     if (!isSafeVariable) {
+                         // select literal + other unsafe vars
+                         selectContainingVariables.put(Helper.getFQVariableName(var), Boolean.FALSE);
+                     }
+                 }
+             }
++        } else {
++            if (!isSafeVariable) {
++                selectContainingVariables.put(Helper.getFQVariableName(var), Boolean.FALSE);
++            }
+         }
++
+     }
+
+     private void reportStrings(ASTMethodCallExpression m, Object data) {
+diff --git a/pmd-apex/src/test/resources/net/sourceforge/pmd/lang/apex/rule/security/xml/ApexSOQLInjection.xml b/pmd-apex/src/test/resources/net/sourceforge/pmd/lang/apex/rule/security/xml/ApexSOQLInjection.xml
+index 57822cc..8646523 100644
+--- a/pmd-apex/src/test/resources/net/sourceforge/pmd/lang/apex/rule/security/xml/ApexSOQLInjection.xml
++++ b/pmd-apex/src/test/resources/net/sourceforge/pmd/lang/apex/rule/security/xml/ApexSOQLInjection.xml
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+
+ <test-data>
+-	<test-code>
++ 	<test-code>
+ 		<description>Potentially unsafe SOQL on concatenation of variables 1
+ 		</description>
+ 		<expected-problems>1</expected-problems>
+@@ -189,4 +189,21 @@ public class Foo {
+ }
+ 		]]></code>
+ 	</test-code>
++
++	<test-code>
++		<description>Unsafe SOQL merged from many variables</description>
++		<expected-problems>1</expected-problems>
++		<code><![CDATA[
++
++public class Foo {
++
++	public List<SObject> test1(String fieldNameQuery, String objName) {
++		String baseQuery = 'Select ';
++		String finalObjectQuery;
++		finalObjectQuery = baseQuery + fieldNameQuery + ' from ' + objName;
++		return Database.query(finalObjectQuery);
++	}
++}
++		]]></code>
++	</test-code>
+ </test-data>
