@@ -1,6 +1,7 @@
 package com.github.data;
 
 
+import au.com.bytecode.opencsv.CSVWriter;
 import com.github.git.PatchStatistics;
 import com.github.git.Patches;
 import org.apache.commons.io.IOUtils;
@@ -23,17 +24,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.util.*;
 
 import static org.eclipse.egit.github.core.client.IGitHubConstants.SEGMENT_COMMITS;
 import static org.eclipse.egit.github.core.client.IGitHubConstants.SEGMENT_REPOS;
 
-public class GitHubIssuesLoader {
+public class GitHubCommitLoader {
 
 
-    public List<LabeledPoint> getDataTraining(String owner, String repo) throws Exception {
+    public void getDataTraining(String owner, String repo) throws Exception {
         GitHubClient client = new GitHubClient();
         client.setOAuth2Token("cb6588ee966e21d166f5e0a87b0380c6b179a941");
         GitHubClient diffClient = new GitHubClient(){
@@ -56,16 +56,16 @@ public class GitHubIssuesLoader {
 
         Repository repository = new RepositoryService(client).getRepository(owner, repo);
 
-        List<LabeledPoint> dataTraining = new LinkedList<>();
-        dataTraining.addAll(getDataTraining(1.0, srv, diffClient, repository, "Bug"));
-        dataTraining.addAll(getDataTraining(0.0, srv, diffClient, repository, "Enhancement"));
-        dataTraining.addAll(getDataTraining(0.0, srv, diffClient, repository, "Feature Request"));
-        //dataTraining.addAll(getDataTraining(0.0, srv, diffClient, repository, "CleanUp"));
-        return dataTraining;
+
+        //getDataTraining(srv, diffClient, commitsSrv, repository, "Bug");
+        //getDataTraining(srv, diffClient,  commitsSrv,repository, "Enhancement");
+        getDataTraining(srv, diffClient,  commitsSrv,repository, "Feature-Request");
+        //getDataTraining(srv, diffClient,  commitsSrv, repository, "CleanUp");
     }
 
 
-    private List<LabeledPoint> getDataTraining(double rowLabel, IssueService srv,  GitHubClient diffClient,
+    private void getDataTraining(IssueService srv,
+                                               GitHubClient diffClient, CommitService commitsSrv,
                                                Repository repository, String label) throws Exception {
         Map<String, String> filters = new HashMap<String, String>();
         filters.put("state", "closed");
@@ -73,14 +73,12 @@ public class GitHubIssuesLoader {
         List<LabeledPoint> dataTraining = new LinkedList<LabeledPoint>();
         List<Issue> issues = srv.getIssues(repository, filters);
 
+        CSVWriter writer = new CSVWriter(new FileWriter(new File("commits-"+label+".csv")));
+
         System.out.println("data training: "+label+". Total: "+issues.size());
 
         int index = 0;
         for (Issue issue : issues) {
-
-            int additions = 0;
-            int deletions = 0;
-            int modifications = 0;
 
             PageIterator<IssueEvent> events = srv.pageIssueEvents(repository.getOwner().getLogin(),repository.getName(),
                     issue.getNumber());
@@ -110,9 +108,38 @@ public class GitHubIssuesLoader {
                                 if(patch != null ) {
 
                                     PatchStatistics ps = Patches.getPatchStatistics(patch);
-                                    additions += ps.getAdditions();
-                                    deletions += ps.getDeletions();
-                                    modifications += ps.getModifications();
+
+                                    RepositoryCommit rcommit = commitsSrv.getCommit(repository, commit);
+                                    List<CommitFile> filesC = rcommit.getFiles();
+
+                                    int modified = 0;
+                                    int added = 0;
+                                    int removed = 0;
+
+                                    for (CommitFile cf : filesC) {
+                                        String status = filesC.get(0).getStatus();
+                                        if("modified".equals(status)){
+                                            modified++;
+                                        }
+                                        else if("added".equals(status)){
+                                            added++;
+                                        }
+                                        else{
+                                            removed++;
+                                        }
+                                    }
+
+                                    writer.writeNext(new String[] {
+                                            String.valueOf(ps.getAdditions()),
+                                            String.valueOf(ps.getDeletions()),
+                                            String.valueOf(ps.getModifications()),
+                                            String.valueOf(added),
+                                            String.valueOf(modified),
+                                            String.valueOf(removed),
+                                            String.valueOf(rcommit.getFiles().size()),
+                                            rcommit.getCommit().getMessage().replaceAll("\\r|\\n|\\r|\\n", " ")
+                                    });
+
                                 }
 
 
@@ -125,92 +152,19 @@ public class GitHubIssuesLoader {
 
             }
 
-            if(additions > 0 || deletions > 0) {
-                dataTraining.add(new LabeledPoint(rowLabel,
-                        new DenseVector(new double[]{additions, deletions, modifications})));
-            }
             index++;
             if(index % 10 == 0){
                 System.out.println("data training: "+label+". Status :[ "+index+" / "+issues.size()+" ]");
             }
         }
-        return dataTraining;
+        writer.close();
     }
 
-    public static void analysis(){
-
-        JavaSparkContext sc = new JavaSparkContext("local", "commit-classifier");
-        JavaRDD<LabeledPoint> data =  sc.textFile("data.csv").map((s)->{
-            String[] parts = s.split(" ");
-            double additions = Double.parseDouble(parts[1]);
-            double deletions = Double.parseDouble(parts[2]);
-            double modifications = Double.parseDouble(parts[3]);
-
-            return new LabeledPoint(Double.parseDouble(parts[0]),
-                    new DenseVector(new double[]{additions, deletions,
-                            modifications}));
-        });
-
-
-        //MLUtils.loadLibSVMFile(sc.sc(), "data.csv").toJavaRDD();
-        //JavaRDD<LabeledPoint> data = sc.parallelize(rows);
-
-        JavaRDD<LabeledPoint> training = data.sample(true, 0.6, 11L);
-        training.cache();
-        JavaRDD<LabeledPoint> test = data.subtract(training);
-
-        // Run training algorithm to build the model.
-        int numIterations = 100;
-
-        final SVMModel model = SVMWithSGD.train(training.rdd(), numIterations);
-
-        // Clear the default threshold.
-        model.clearThreshold();
-
-        // Compute raw scores on the test set.
-        JavaRDD<Tuple2<Object, Object>> scoreAndLabels = test.map(
-                new Function<LabeledPoint, Tuple2<Object, Object>>() {
-                    public Tuple2<Object, Object> call(LabeledPoint p) {
-                        Double score = model.predict(p.features());
-                        return new Tuple2<Object, Object>(score, p.label());
-                    }
-                }
-        );
-
-        // Get evaluation metrics.
-        BinaryClassificationMetrics metrics =
-                new BinaryClassificationMetrics(JavaRDD.toRDD(scoreAndLabels));
-        double auROC = metrics.areaUnderROC();
-
-        System.out.println("Area under ROC = " + auROC);
-
-        // Save and load model
-        model.save(sc.sc(), "target/tmp/javaSVMWithSGDModel");
-        SVMModel sameModel = SVMModel.load(sc.sc(), "target/tmp/javaSVMWithSGDModel");
-    }
-
-    public void write(List<LabeledPoint> rows)throws Exception{
-        FileWriter fw = new FileWriter(new File("data.csv"));
-        for(LabeledPoint lp : rows){
-            org.apache.spark.mllib.linalg.Vector v = lp.features();
-
-            int max = v.size();
-            String values = "";
-            for(int i = 0; i < max; i++) {
-                values += v.apply(i);
-                if(i+1 < max){
-                    values+=" ";
-                }
-            }
-            fw.write(lp.label()+" "+values+"\n");
-        }
-        fw.close();
-    }
 
     public static void main(String[] args) throws Exception {
-        /*GitHubIssuesLoader loader = new GitHubIssuesLoader();
-        List<LabeledPoint> rows = loader.getDataTraining("ReactiveX", "RxJava");
-        loader.write(rows);*/
-        analysis();
+        GitHubCommitLoader loader = new GitHubCommitLoader();
+        loader.getDataTraining("ReactiveX", "RxJava");
+
+
     }
 }
