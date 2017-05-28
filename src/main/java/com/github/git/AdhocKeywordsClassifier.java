@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TimeModelExecutor {
+public class AdhocKeywordsClassifier {
 
     // ir commit a commit en el git log y ver cuantos se pueden clasificar segun el titulo (cleanup, fixup)/ (add, adds adding) / bug
 
