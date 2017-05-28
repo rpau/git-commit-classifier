@@ -29,7 +29,7 @@ public class RegressionModelExecutor {
 
     File directory = new File("/Users/raquel.pau/github/RxJava");
 
-    String[] categories = new String[] {"bugs", "features", "cleanup", "release", "merge"};
+    String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
 
     public Instances getDataset() {
 
@@ -53,10 +53,7 @@ public class RegressionModelExecutor {
     public void store() throws IOException {
 
         Instances dataSet = getDataset();
-
-
         int categoryId = 0;
-
 
         for(String category: categories) {
 
@@ -184,6 +181,6 @@ public class RegressionModelExecutor {
 
     public static void main(String[] args) throws Exception {
         RegressionModelExecutor exec = new RegressionModelExecutor();
-        exec.infer();
+        exec.evaluate();
     }
 }

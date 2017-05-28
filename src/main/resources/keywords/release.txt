@@ -1,0 +1,5 @@
+release
+version
+archive
+tag
+snapshot
