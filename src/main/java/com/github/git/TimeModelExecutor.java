@@ -17,8 +17,15 @@ public class TimeModelExecutor {
     // ir commit a commit en el git log y ver cuantos se pueden clasificar segun el titulo (cleanup, fixup)/ (add, adds adding) / bug
 
     public static void main(String[] args) throws Exception {
-        Git git = Git.open(new File("/Users/raquelpau/github/node"));
-        CSVWriter unclassifiedCommits = new CSVWriter(new FileWriter( new File("unknown.csv")));
+        File directory = new File("/Users/raquel.pau/github/RxJava");
+        Git git = Git.open(directory);
+
+        CSVWriter featuresCSV = new CSVWriter(new FileWriter( new File(directory, "features.csv")));
+        CSVWriter bugsCSV = new CSVWriter(new FileWriter( new File(directory, "bugs.csv")));
+        CSVWriter cleanUpCSV = new CSVWriter(new FileWriter( new File(directory, "cleanup.csv")));
+        CSVWriter releaseCSV = new CSVWriter(new FileWriter( new File(directory, "release.csv")));
+        CSVWriter mergeCSV = new CSVWriter(new FileWriter( new File(directory, "merge.csv")));
+
         LogCommand logCmd = git.log();
         Iterable<RevCommit> commits = logCmd.all().call();
         int bugs = 0;
@@ -46,59 +53,21 @@ public class TimeModelExecutor {
 
                 wordSet.add(word.trim());
             }
-            if(wordSet.contains("bug")
-                    || wordSet.contains("issue")
-                    || wordSet.contains("fix")
-                    || wordSet.contains("fixes")
-                    || wordSet.contains("fixed")
-                    || wordSet.contains("fixing")
-                    || wordSet.contains("error")
-                    || wordSet.contains("errors")
-                    || wordSet.contains("correct")
-                    || wordSet.contains("bugfixes")
-                    || wordSet.contains("bugs")
-                    || wordSet.contains("revert")
-                    || wordSet.contains("rollback")
-                    || wordSet.contains("disable")
-                    || wordSet.contains("undo")
-                    || wordSet.contains("corrected")
-                    || wordSet.contains("corrects")
-                    || wordSet.contains("correct")
-                    || wordSet.contains("restored")
-                    || wordSet.contains("restore")
-                    || wordSet.contains("restoring")
-                    || wordSet.contains("restore")
-                    || wordSet.contains("restored")
-                    || wordSet.contains("wrong")
-                    || wordSet.contains("incorrectly")
-                    || wordSet.contains("incorrect")
-                    || wordSet.contains("workaround")
-                    || wordSet.contains("backport")
-                    || wordSet.contains("repair")){
-                bugs ++;
-            }
-            else if (wordSet.contains("add")
-                    || wordSet.contains("adds")
-                    || wordSet.contains("addition")
-                    || wordSet.contains("added")
-                    || wordSet.contains("adding")
-                    || wordSet.contains("new")
-                    || wordSet.contains("implement")
-                    || wordSet.contains("support")
-                    || wordSet.contains("supports")
-                    || wordSet.contains("supported")
-                    || wordSet.contains("supporting")
-                    || wordSet.contains("implemented")
-                    || wordSet.contains("implementation")
-                    || wordSet.contains("implementing")
-                    || wordSet.contains("implements")
-                    || wordSet.contains("create")
-                    || wordSet.contains("creating")
-                    || wordSet.contains("created")
-                    || wordSet.contains("make")){
-                features++;
-            }
-            else if(wordSet.contains("cleanup")
+            if(wordSet.contains("cleanup")
+                    || wordSet.contains("style")
+                    || wordSet.contains("warnings")
+                    || wordSet.contains("cleaning")
+                    || wordSet.contains("findbugs")
+                    || wordSet.contains("pmd")
+                    || wordSet.contains("travis")
+                    || wordSet.contains("indentation")
+                    || wordSet.contains("docs")
+                    || wordSet.contains("comments")
+                    || wordSet.contains("naming")
+                    || wordSet.contains("import")
+                    || wordSet.contains("whitespace")
+                    || wordSet.contains("whitespaces")
+                    || wordSet.contains("unnecessary")
                     || wordSet.contains("cleanups")
                     || wordSet.contains("fixup")
                     || wordSet.contains("fixups")
@@ -193,29 +162,95 @@ public class TimeModelExecutor {
                     || wordSet.contains("rectify")
                     || wordSet.contains("duplicate")
                     || wordSet.contains("simplify")
+                    || wordSet.contains("checkstyle")
                     ){
                 cleanup++;
+                cleanUpCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
+            }
+            else if(wordSet.contains("bug")
+                    || wordSet.contains("bugfix")
+                    || wordSet.contains("NPE")
+                    || wordSet.contains("issue")
+                    || wordSet.contains("fix")
+                    || wordSet.contains("fixes")
+                    || wordSet.contains("fixed")
+                    || wordSet.contains("fixing")
+                    || wordSet.contains("error")
+                    || wordSet.contains("errors")
+                    || wordSet.contains("correct")
+                    || wordSet.contains("bugfixes")
+                    || wordSet.contains("bugs")
+                    || wordSet.contains("revert")
+                    || wordSet.contains("rollback")
+                    || wordSet.contains("disable")
+                    || wordSet.contains("undo")
+                    || wordSet.contains("corrected")
+                    || wordSet.contains("corrects")
+                    || wordSet.contains("correct")
+                    || wordSet.contains("restored")
+                    || wordSet.contains("restore")
+                    || wordSet.contains("restoring")
+                    || wordSet.contains("restore")
+                    || wordSet.contains("restored")
+                    || wordSet.contains("wrong")
+                    || wordSet.contains("incorrectly")
+                    || wordSet.contains("incorrect")
+                    || wordSet.contains("workaround")
+                    || wordSet.contains("backport")
+                    || wordSet.contains("repair")){
+                bugs ++;
+                bugsCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
+            }
+            else if (wordSet.contains("add")
+                    || wordSet.contains("adds")
+                    || wordSet.contains("addition")
+                    || wordSet.contains("added")
+                    || wordSet.contains("adding")
+                    || wordSet.contains("new")
+                    || wordSet.contains("implement")
+                    || wordSet.contains("support")
+                    || wordSet.contains("supports")
+                    || wordSet.contains("supported")
+                    || wordSet.contains("supporting")
+                    || wordSet.contains("implemented")
+                    || wordSet.contains("implementation")
+                    || wordSet.contains("implementing")
+                    || wordSet.contains("implements")
+                    || wordSet.contains("create")
+                    || wordSet.contains("creating")
+                    || wordSet.contains("created")
+                    || wordSet.contains("make")){
+                features++;
+                featuresCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
             }
             else if (wordSet.contains("release") || wordSet.contains("version") || wordSet.contains("archive")
                     || wordSet.contains("tag") || wordSet.contains("snapshot") || (
                             wordSet.size() == 1 && wordSet.iterator().next().contains("."))){
                 releases++;
+                releaseCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
 
             }
             else if (wordSet.contains("merge") || wordSet.contains("merges") || wordSet.contains("merging")
                     || wordSet.contains("merged")){
                 merges++;
-
+                mergeCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
             }
             else{
                 other++;
-                unclassifiedCommits.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
+                featuresCSV.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
+                //unclassifiedCommits.writeNext(new String[] {msg.replaceAll("\\r|\\n|\\r|\\n", " ")});
             }
         }
         System.out.println("result: bugs:"+bugs+", features: "+features+", cleanup: "+cleanup+", releases: "
                 +releases+", merges :"+merges+" others: "+other);
         git.close();
-        unclassifiedCommits.close();
+
+        featuresCSV.close();
+        releaseCSV.close();
+        cleanUpCSV.close();
+        bugsCSV.close();
+        mergeCSV.close();
+        //unclassifiedCommits.close();
     }
 
     //fichero => #bugs, #features, #cleanups
