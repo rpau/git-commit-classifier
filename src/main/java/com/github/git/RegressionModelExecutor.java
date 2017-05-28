@@ -2,8 +2,10 @@ package com.github.git;
 
 
 import au.com.bytecode.opencsv.CSVReader;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.LogCommand;
+import org.eclipse.jgit.revwalk.RevCommit;
 import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
 import weka.classifiers.meta.FilteredClassifier;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
@@ -27,9 +29,10 @@ public class RegressionModelExecutor {
 
     File directory = new File("/Users/raquel.pau/github/RxJava");
 
-    public void store() throws IOException {
+    String[] categories = new String[] {"bugs", "features", "cleanup", "release", "merge"};
 
-        String[] categories = new String[] {"bugs", "features", "cleanup", "release", "merge"};
+    public Instances getDataset() {
+
         ArrayList<Attribute> atts = new ArrayList<Attribute>();
 
         atts.add(new Attribute("commit", (ArrayList<String>)null));
@@ -44,8 +47,16 @@ public class RegressionModelExecutor {
         Instances dataSet = new Instances("Commits", atts, 1);
         dataSet.setClassIndex(1);
 
+        return dataSet;
+    }
+
+    public void store() throws IOException {
+
+        Instances dataSet = getDataset();
+
 
         int categoryId = 0;
+
 
         for(String category: categories) {
 
@@ -110,21 +121,50 @@ public class RegressionModelExecutor {
 
     public String infer(Classifier classifier, Instances trainingSet, String message) throws Exception {
 
+        Instances newDataset = getDataset();
 
-        Instance instance = new DenseInstance(2);
-        instance.attribute(0).addStringValue(message);
+        double[] values = new double[newDataset.numAttributes()];
+        values[0] = newDataset.attribute(0).addStringValue(message);
+        values[1] = -1;
+
+        Instance instance = new DenseInstance(1.0, values);
+        newDataset.add(instance);
+        newDataset.setClassIndex(newDataset.numAttributes() - 1);
         // evaluate classifier and print some statistics
-        Evaluation eval = new Evaluation(trainingSet);
-        double prediction = eval.evaluateModelOnce(classifier, instance);
+        Instance firstInstance = newDataset.firstInstance();
 
-        return instance.classAttribute().value((int) prediction);
+        double prediction = classifier.classifyInstance(firstInstance);
+
+        return firstInstance.classAttribute().value((int) prediction);
     }
 
-    public static void main(String[] args) throws Exception {
-        RegressionModelExecutor exec = new RegressionModelExecutor();
-        exec.store();
-        Instances trainingSet = exec.readTrainingSet();
-        Classifier fc = exec.train(trainingSet);
+    public void infer() throws Exception {
+
+        Git git = Git.open(directory);
+
+        try {
+            LogCommand logCmd = git.log();
+            Iterable<RevCommit> commits = logCmd.all().call();
+
+            RegressionModelExecutor exec = new RegressionModelExecutor();
+            exec.store();
+            Instances trainingSet = exec.readTrainingSet();
+            Classifier fc = exec.train(trainingSet);
+
+            for (RevCommit commit : commits) {
+                String category = infer(fc, trainingSet, commit.getFullMessage());
+                System.out.println(commit.getName() + " " + category);
+            }
+        } finally {
+            git.close();
+        }
+
+    }
+
+    public void evaluate() throws Exception {
+       store();
+        Instances trainingSet = readTrainingSet();
+        Classifier fc = train(trainingSet);
         int errors = 0;
         for (int i = 0; i < trainingSet.numInstances(); i++) {
             double pred = fc.classifyInstance(trainingSet.instance(i));
@@ -140,7 +180,10 @@ public class RegressionModelExecutor {
             System.out.println(", predicted: " + predicted);
         }
         System.out.println("Error ratio :"+ Double.toString((double)errors/ (double)trainingSet.numInstances()));
+    }
 
-        //exec.infer(classifier, trainingSet, "new commit");
+    public static void main(String[] args) throws Exception {
+        RegressionModelExecutor exec = new RegressionModelExecutor();
+        exec.infer();
     }
 }
