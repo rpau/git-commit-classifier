@@ -89,50 +89,48 @@ public class AdhocKeywordsClassifier {
         Map<String, Classification> classificationMap = new HashMap<>();
 
         File directory = new File("/Users/raquel.pau/github/RxJava");
-        Git git = Git.open(directory);
+        try(Git git = Git.open(directory)) {
 
-        for (String classification: classifications) {
-            classificationMap.put(classification, new Classification(directory, classification));
-        }
+            for (String classification : classifications) {
+                classificationMap.put(classification, new Classification(directory, classification));
+            }
 
-        LogCommand logCmd = git.log();
-        Iterable<RevCommit> commits = logCmd.all().call();
+            LogCommand logCmd = git.log();
+            Iterable<RevCommit> commits = logCmd.all().call();
 
-        for (RevCommit commit : commits) {
-            String msg = commit.getFullMessage();
-            Set<String> wordSet = getWords(msg);
+            for (RevCommit commit : commits) {
+                String msg = commit.getFullMessage();
+                Set<String> wordSet = getWords(msg);
 
-            boolean matched = false;
-            for (String classification: classifications) {
-                Classification classif = classificationMap.get(classification);
+                boolean matched = false;
+                for (String classification : classifications) {
+                    Classification classif = classificationMap.get(classification);
 
-                if (!matched && classif.matches(wordSet)){
+                    if (!matched && classif.matches(wordSet)) {
+                        classif.inc();
+                        classif.write(msg);
+                        matched = true;
+                    }
+                }
+
+                if (!matched) {
+                    Classification classif = null;
+                    if (wordSet.size() == 1 && wordSet.iterator().next().contains(".")) {
+                        classif = classificationMap.get("release");
+                    } else {
+                        classif = classificationMap.get("features");
+                    }
                     classif.inc();
                     classif.write(msg);
-                    matched = true;
                 }
             }
 
-            if (!matched) {
-                Classification classif = null;
-                if(wordSet.size() == 1 && wordSet.iterator().next().contains(".")) {
-                    classif = classificationMap.get("release");
-                }
-                else{
-                    classif = classificationMap.get("features");
-                }
-                classif.inc();
-                classif.write(msg);
+            for (String classification : classifications) {
+                Classification classif = classificationMap.get(classification);
+                System.out.println(classif.name + " = " + classif.counter);
+                classif.close();
             }
         }
-
-        for (String classification: classifications) {
-            Classification classif = classificationMap.get(classification);
-            System.out.println(classif.name+ " = "+classif.counter);
-            classif.close();
-        }
-
-        git.close();
 
     }
 

@@ -27,7 +27,7 @@ public class RegressionModelExecutor {
 
     private String path = "training.arff";
 
-    File directory = new File("/Users/raquel.pau/github/RxJava");
+    File directory = new File("/Users/raquel.pau/rocket/rkt-clads-api");
 
     String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
 
@@ -42,7 +42,7 @@ public class RegressionModelExecutor {
         for(String category: categories){
             classVal.add(category);
         }
-        atts.add(new Attribute("category", classVal));
+        atts.add(new Attribute("s_label", classVal));
 
         Instances dataSet = new Instances("Commits", atts, 1);
         dataSet.setClassIndex(1);
@@ -59,20 +59,22 @@ public class RegressionModelExecutor {
 
             File commitsFile = new File(directory, category+".csv");
 
-            CSVReader reader = new CSVReader(new FileReader(commitsFile));
+            try (FileReader freader = new FileReader(commitsFile)){
+                CSVReader reader = new CSVReader(freader);
 
-            String[] row = reader.readNext();
+                String[] row = reader.readNext();
 
-            while(row != null) {
-                double[] values = new double[dataSet.numAttributes()];
+                while (row != null) {
+                    double[] values = new double[dataSet.numAttributes()];
 
-                values[0] = dataSet.attribute(0).addStringValue(row[0]);
-                values[1] = categoryId;
-                Instance instance = new DenseInstance(1.0, values);
-                dataSet.add(instance);
-                row = reader.readNext();
+                    values[0] = dataSet.attribute(0).addStringValue(row[0]);
+                    values[1] = categoryId;
+                    Instance instance = new DenseInstance(1.0, values);
+                    dataSet.add(instance);
+                    row = reader.readNext();
+                }
+                categoryId++;
             }
-            categoryId++;
 
         }
         dataSet.setClassIndex(dataSet.numAttributes() - 1);
@@ -181,6 +183,6 @@ public class RegressionModelExecutor {
 
     public static void main(String[] args) throws Exception {
         RegressionModelExecutor exec = new RegressionModelExecutor();
-        exec.evaluate();
+        exec.infer();
     }
 }
