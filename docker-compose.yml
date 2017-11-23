@@ -1,0 +1,13 @@
+version: '2'
+services:
+  postgres:
+    image: postgres:10-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+  adminer:
+        image: adminer
+        restart: always
+        ports:
+            - 8080:8080

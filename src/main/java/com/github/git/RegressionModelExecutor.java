@@ -12,7 +12,6 @@ import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.converters.ArffSaver;
 import weka.core.stemmers.SnowballStemmer;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.StringToWordVector;
@@ -22,6 +21,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class RegressionModelExecutor {
 
@@ -31,12 +31,20 @@ public class RegressionModelExecutor {
 
     String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
 
-    public Instances getDataset() {
+    private ModelSaver saver = new FileModelSaver();
+
+    public RegressionModelExecutor() {
+    }
+
+    public RegressionModelExecutor(ModelSaver saver) {
+        this.saver = saver;
+    }
+
+    public Instances initializeEmptyDataset() {
 
         ArrayList<Attribute> atts = new ArrayList<Attribute>();
 
         atts.add(new Attribute("commit", (ArrayList<String>)null));
-
 
         ArrayList<String> classVal = new ArrayList<String>();
         for(String category: categories){
@@ -44,7 +52,7 @@ public class RegressionModelExecutor {
         }
         atts.add(new Attribute("s_label", classVal));
 
-        Instances dataSet = new Instances("Commits", atts, 1);
+        Instances dataSet = new Instances("commits", atts, 1);
         dataSet.setClassIndex(1);
 
         return dataSet;
@@ -52,7 +60,7 @@ public class RegressionModelExecutor {
 
     public void store() throws IOException {
 
-        Instances dataSet = getDataset();
+        Instances dataSet = initializeEmptyDataset();
         int categoryId = 0;
 
         for(String category: categories) {
@@ -78,12 +86,19 @@ public class RegressionModelExecutor {
 
         }
         dataSet.setClassIndex(dataSet.numAttributes() - 1);
+        saver.save(dataSet);
 
-        ArffSaver saver = new ArffSaver();
-        saver.setInstances(dataSet);
+    }
 
-        saver.setFile(new File(directory, path));
-        saver.writeBatch();
+    public void store(String text, String category) throws IOException {
+        int categoryId = Arrays.asList(categories).indexOf(category);
+        Instances dataSet = initializeEmptyDataset();
+        double[] values = new double[dataSet.numAttributes()];
+        values[0] = dataSet.attribute(0).addStringValue(text);
+        values[1] = categoryId;
+        Instance instance = new DenseInstance(1.0, values);
+        dataSet.add(instance);
+        saver.save(dataSet);
     }
 
     public Instances readTrainingSet() throws Exception{
@@ -120,7 +135,7 @@ public class RegressionModelExecutor {
 
     public String infer(Classifier classifier, Instances trainingSet, String message) throws Exception {
 
-        Instances newDataset = getDataset();
+        Instances newDataset = initializeEmptyDataset();
 
         double[] values = new double[newDataset.numAttributes()];
         values[0] = newDataset.attribute(0).addStringValue(message);
@@ -144,11 +159,9 @@ public class RegressionModelExecutor {
         try {
             LogCommand logCmd = git.log();
             Iterable<RevCommit> commits = logCmd.all().call();
-
-            RegressionModelExecutor exec = new RegressionModelExecutor();
-            exec.store();
-            Instances trainingSet = exec.readTrainingSet();
-            Classifier fc = exec.train(trainingSet);
+            store();
+            Instances trainingSet = readTrainingSet();
+            Classifier fc = train(trainingSet);
 
             for (RevCommit commit : commits) {
                 String category = infer(fc, trainingSet, commit.getFullMessage());
