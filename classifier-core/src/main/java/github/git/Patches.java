@@ -1,11 +1,15 @@
-package com.github.git;
+package github.git;
+
+import difflib.Chunk;
+import difflib.Delta;
+import difflib.DiffUtils;
+import difflib.Patch;
+import difflib.PatchFailedException;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import difflib.*;
 
 public class Patches {
 

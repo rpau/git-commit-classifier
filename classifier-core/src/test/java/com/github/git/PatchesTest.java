@@ -1,6 +1,8 @@
 package com.github.git;
 
 
+import github.git.PatchStatistics;
+import github.git.Patches;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;

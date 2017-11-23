@@ -1,4 +1,4 @@
-package com.github.data;
+package github.data;
 
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;

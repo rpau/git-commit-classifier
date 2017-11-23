@@ -1,4 +1,4 @@
-package com.github.data;
+package github.data;
 
 
 import com.github.git.PatchStatistics;
@@ -11,8 +11,14 @@ import org.apache.spark.mllib.classification.SVMWithSGD;
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
 import org.apache.spark.mllib.linalg.DenseVector;
 import org.apache.spark.mllib.regression.LabeledPoint;
-import org.eclipse.egit.github.core.*;
-import org.eclipse.egit.github.core.client.*;
+import org.eclipse.egit.github.core.CommitFile;
+import org.eclipse.egit.github.core.Issue;
+import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.Repository;
+import org.eclipse.egit.github.core.RepositoryCommit;
+import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.PageIterator;
+import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.CommitService;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.RepositoryService;
@@ -20,7 +26,11 @@ import scala.Tuple2;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class GitHubIssuesLoader {
 

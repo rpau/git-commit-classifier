@@ -1,4 +1,4 @@
-package com.github.git;
+package github.git;
 
 import weka.core.Instances;
 import weka.core.converters.DatabaseSaver;

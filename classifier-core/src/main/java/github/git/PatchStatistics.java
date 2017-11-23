@@ -1,4 +1,4 @@
-package com.github.git;
+package github.git;
 
 
 public class PatchStatistics {
