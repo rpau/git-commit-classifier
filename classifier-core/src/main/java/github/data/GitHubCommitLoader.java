@@ -2,11 +2,8 @@ package github.data;
 
 
 import au.com.bytecode.opencsv.CSVWriter;
-import com.github.git.PatchStatistics;
-import com.github.git.Patches;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.mllib.regression.LabeledPoint;
-import org.eclipse.egit.github.core.CommitFile;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.Repository;
@@ -77,91 +74,53 @@ public class GitHubCommitLoader {
         List<LabeledPoint> dataTraining = new LinkedList<LabeledPoint>();
         List<Issue> issues = srv.getIssues(repository, filters);
 
-        CSVWriter writer = new CSVWriter(new FileWriter(new File("commits-"+label+".csv")));
+        try(CSVWriter writer = new CSVWriter(new FileWriter(new File("commits-"+label+".csv")))) {
 
-        System.out.println("data training: "+label+". Total: "+issues.size());
+            System.out.println("data training: " + label + ". Total: " + issues.size());
 
-        int index = 0;
-        for (Issue issue : issues) {
+            int index = 0;
+            for (Issue issue : issues) {
 
-            PageIterator<IssueEvent> events = srv.pageIssueEvents(repository.getOwner().getLogin(),repository.getName(),
-                    issue.getNumber());
+                PageIterator<IssueEvent> events = srv.pageIssueEvents(repository.getOwner().getLogin(), repository.getName(),
+                        issue.getNumber());
 
-            while(events.hasNext()){
-                Collection<IssueEvent> issueEvents = events.next();
-                for(IssueEvent ie: issueEvents){
-                    String eventType = ie.getEvent().toLowerCase();
+                while (events.hasNext()) {
+                    Collection<IssueEvent> issueEvents = events.next();
+                    for (IssueEvent ie : issueEvents) {
+                        String eventType = ie.getEvent().toLowerCase();
 
-                    if("merged".equals(eventType) || "closed".equals(eventType)) {
-                        String commit = ie.getCommitId();
-                        if(commit != null) {
-                            try {
+                        if ("merged".equals(eventType) || "closed".equals(eventType)) {
+                            String commit = ie.getCommitId();
+                            if (commit != null) {
+                                try {
 
-                                StringBuilder uri = new StringBuilder(SEGMENT_REPOS);
-                                uri.append('/').append(repository.getOwner().getLogin());
-                                uri.append('/').append(repository.getName());
-                                uri.append(SEGMENT_COMMITS);
-                                uri.append('/').append(commit);
-                                GitHubRequest request = new GitHubRequest();
-                                request.setUri(uri);
-                                request.setType(RepositoryCommit.class);
+                                    StringBuilder uri = new StringBuilder(SEGMENT_REPOS);
+                                    uri.append('/').append(repository.getOwner().getLogin());
+                                    uri.append('/').append(repository.getName());
+                                    uri.append(SEGMENT_COMMITS);
+                                    uri.append('/').append(commit);
+                                    GitHubRequest request = new GitHubRequest();
+                                    request.setUri(uri);
+                                    request.setType(RepositoryCommit.class);
 
-                                GitHubResponse response = diffClient.get(request);
-                                String patch = response.getBody().toString();
+                                    GitHubResponse response = diffClient.get(request);
+                                    String patch = response.getBody().toString();
 
-                                if(patch != null ) {
-
-                                    PatchStatistics ps = Patches.getPatchStatistics(patch);
-
-                                    RepositoryCommit rcommit = commitsSrv.getCommit(repository, commit);
-                                    List<CommitFile> filesC = rcommit.getFiles();
-
-                                    int modified = 0;
-                                    int added = 0;
-                                    int removed = 0;
-
-                                    for (CommitFile cf : filesC) {
-                                        String status = filesC.get(0).getStatus();
-                                        if("modified".equals(status)){
-                                            modified++;
-                                        }
-                                        else if("added".equals(status)){
-                                            added++;
-                                        }
-                                        else{
-                                            removed++;
-                                        }
-                                    }
-
-                                    writer.writeNext(new String[] {
-                                            String.valueOf(ps.getAdditions()),
-                                            String.valueOf(ps.getDeletions()),
-                                            String.valueOf(ps.getModifications()),
-                                            String.valueOf(added),
-                                            String.valueOf(modified),
-                                            String.valueOf(removed),
-                                            String.valueOf(rcommit.getFiles().size()),
-                                            rcommit.getCommit().getMessage().replaceAll("\\r|\\n|\\r|\\n", " ")
-                                    });
-
+                                } catch (RequestException e) {
+                                    System.out.println("Error on commit " + commit + " at issue " + issue.getNumber());
                                 }
-
-
-                            } catch (RequestException e) {
-                                System.out.println("Error on commit " + commit+" at issue "+issue.getNumber());
                             }
                         }
                     }
+
                 }
 
-            }
-
-            index++;
-            if(index % 10 == 0){
-                System.out.println("data training: "+label+". Status :[ "+index+" / "+issues.size()+" ]");
+                index++;
+                if (index % 10 == 0) {
+                    System.out.println("data training: " + label + ". Status :[ " + index + " / " + issues.size() + " ]");
+                }
             }
         }
-        writer.close();
     }
 
 
