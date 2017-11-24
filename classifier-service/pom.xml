@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <artifactId>git-commit-classifier</artifactId>
+            <artifactId>classifier-core</artifactId>
             <groupId>com.github</groupId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
