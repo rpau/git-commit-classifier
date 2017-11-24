@@ -1,6 +1,7 @@
 package org.github.classifier.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import github.git.readers.DatabaseTrainingSetReader;
 import github.git.savers.DatabaseModelSaver;
 import github.git.RegressionModelExecutor;
 import org.eclipse.egit.github.core.*;
@@ -12,8 +13,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.thymeleaf.expression.Lists;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 
 @RestController
 public class HelloController {
@@ -22,12 +28,28 @@ public class HelloController {
 
   DatabaseModelSaver saver;
   RegressionModelExecutor executor;
+  DatabaseTrainingSetReader reader;
+  HashMap<String, Label> categoryLabel;
+
+  private final Label bug = new Label().setName("classifier:bug").setColor("ee0701");
+  private final Label feature = new Label().setName("classifier:feature").setColor("84b6eb");
+  private final Label cleanup = new Label().setName("classifier:cleanup").setColor("128A0C");
+  private final Label release = new Label().setName("classifier:release").setColor("b42fa6");
+  private final Label merge = new Label().setName("classifier:merge").setColor("f2f73c");
 
   public HelloController() throws Exception {
     client = new GitHubClient("github.schibsted.io");
     client.setOAuth2Token("ac3ef4487110a53c8a48b4a236082fb7bb277c74");
     saver = new DatabaseModelSaver();
+    reader = new DatabaseTrainingSetReader();
     executor = new RegressionModelExecutor(saver);
+    categoryLabel = new HashMap<>();
+    categoryLabel.put("bugs", bug);
+    categoryLabel.put("features", feature);
+    categoryLabel.put("cleanups", cleanup);
+    categoryLabel.put("release", release);
+    categoryLabel.put("merge", merge);
+
   }
 
   @RequestMapping(value = "/", method = RequestMethod.GET)
@@ -37,28 +59,24 @@ public class HelloController {
 
 
   @RequestMapping(value = "/", method = RequestMethod.POST)
-  public void consume(@RequestBody JsonNode node) throws IOException {
+  public void consume(@RequestBody JsonNode node) throws Exception {
     System.out.println("RECEIVED!!! " + node.getNodeType());
     System.out.println(node.has("pull_request"));
     if (node.has("pull_request")) {
-
       onPullRequest(node);
-    } else if (node.has("issue")) {
-      onIssue(node);
     } else {
       System.out.println("Ignoring event, not a pull request: " + node);
     }
   }
 
-  private void onPullRequest(JsonNode node) throws IOException {
+  private void onPullRequest(JsonNode node) throws Exception {
     String action = node.get("action").textValue();
-    if (action.equals("closed") || action.equals("merged") ) {
-      int prNumber = node.get("number").asInt();
-      String title = node.get("pull_request").get("title").asText();
-      String body = node.get("pull_request").get("body").asText();
-      PullRequestService srv = new PullRequestService(client);
+    int prNumber = node.get("number").asInt();
+    String title = node.get("pull_request").get("title").asText();
+    String body = node.get("pull_request").get("body").asText();
+    Repository repository = new RepositoryService(client).getRepository("xavi-leon", "mobile-app-android");
 
-      Repository repository = new RepositoryService(client).getRepository("xavi-leon", "mobile-app-android");
+    if (action.equals("closed") || action.equals("merged") ) {
       IssueService issueService = new IssueService(client);
       Issue issue = issueService.getIssue(repository, prNumber);
       if (issue.getLabels().size() > 0) {
@@ -76,15 +94,21 @@ public class HelloController {
       } else {
         System.out.println("Ignoring event, no labels on the pull request -> " + node);
       }
+    } else if (action.equals("opened")) {
+      // It's an open pull request, let's try to infer what it is.
+      String category = reader.readTrainingSet().infer(title);
+      addCategoryLabel(repository, prNumber, category);
     } else {
       System.out.println("Ignoring event, not a merge action -> " + node);
     }
   }
 
-  private void onIssue(JsonNode node) {
-    String action = node.get("action").textValue();
-    if (action.equals("labeled")) {
-
-    }
+  private void addCategoryLabel(Repository repo, int prNumber, String category) throws Exception {
+    IssueService srv = new IssueService(client);
+    Issue issue = srv.getIssue(repo, prNumber);
+    issue.getLabels().add(categoryLabel.get(category));
+    Issue edited = srv.editIssue(repo, issue);
+    System.out.println("Label " + category + " added to the issue. " + edited);
   }
+
 }
