@@ -1,34 +1,31 @@
 package org.github.classifier.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import github.git.readers.DatabaseTrainingSetReader;
-import github.git.savers.DatabaseModelSaver;
 import github.git.RegressionModelExecutor;
-import org.eclipse.egit.github.core.*;
+import github.git.readers.FileTrainingSetReader;
+import github.git.savers.FileModelSaver;
+import org.eclipse.egit.github.core.Issue;
+import org.eclipse.egit.github.core.Label;
+import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.service.IssueService;
-import org.eclipse.egit.github.core.service.PullRequestService;
 import org.eclipse.egit.github.core.service.RepositoryService;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-import org.thymeleaf.expression.Lists;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
 
 @RestController
 public class HelloController {
 
   GitHubClient client;
 
-  DatabaseModelSaver saver;
+  FileModelSaver saver;
   RegressionModelExecutor executor;
-  DatabaseTrainingSetReader reader;
+  FileTrainingSetReader reader;
   HashMap<String, Label> categoryLabel;
 
   private final Label bug = new Label().setName("classifier:bug").setColor("ee0701");
@@ -39,9 +36,9 @@ public class HelloController {
 
   public HelloController() throws Exception {
     client = new GitHubClient("github.schibsted.io");
-    client.setOAuth2Token("ac3ef4487110a53c8a48b4a236082fb7bb277c74");
-    saver = new DatabaseModelSaver();
-    reader = new DatabaseTrainingSetReader();
+    client.setOAuth2Token("");
+    saver = new FileModelSaver();
+    reader = new FileTrainingSetReader();
     executor = new RegressionModelExecutor(saver);
     categoryLabel = new HashMap<>();
     categoryLabel.put("bugs", bug);
