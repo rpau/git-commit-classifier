@@ -1,4 +1,4 @@
-package github.git;
+package github.git.savers;
 
 import weka.core.Instances;
 import weka.core.converters.DatabaseSaver;
@@ -11,21 +11,26 @@ public class DatabaseModelSaver implements ModelSaver{
 
   String host = "192.168.99.100";
 
+  public boolean connected = false;
+
   public DatabaseModelSaver() throws Exception {
     save = new DatabaseSaver();
-  }
-
-  @Override
-  public void save(Instances dataSet) throws IOException {
     save.setUrl("jdbc:postgresql://"+host+":5432/postgres");
     save.setUser("postgres");
     save.setPassword("mysecretpassword");
 
-   save.setStructure(dataSet);
+  }
+
+  @Override
+  public void save(Instances dataSet) throws IOException {
+    if (!connected) {
+      save.setStructure(dataSet);
+      connected = true;
+      save.connectToDatabase();
+    }
     //save.setRelationForTableName(false);
     //save.setTableName("commits");
     int max = dataSet.size();
-    save.connectToDatabase();
     for (int i = 0; i < max; i++) {
       save.writeIncremental(dataSet.get(i));
     }

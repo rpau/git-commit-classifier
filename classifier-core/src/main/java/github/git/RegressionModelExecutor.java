@@ -2,21 +2,19 @@ package github.git;
 
 
 import au.com.bytecode.opencsv.CSVReader;
+import github.git.readers.FileTrainingSetReader;
+import github.git.readers.TrainingSet;
+import github.git.readers.TrainingSetReader;
+import github.git.savers.FileModelSaver;
+import github.git.savers.ModelSaver;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.revwalk.RevCommit;
-import weka.classifiers.Classifier;
-import weka.classifiers.meta.FilteredClassifier;
-import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.stemmers.SnowballStemmer;
-import weka.filters.unsupervised.attribute.Remove;
-import weka.filters.unsupervised.attribute.StringToWordVector;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -33,6 +31,8 @@ public class RegressionModelExecutor {
 
     private ModelSaver saver = new FileModelSaver();
 
+    private TrainingSetReader reader = new FileTrainingSetReader();
+
     public RegressionModelExecutor() {
     }
 
@@ -43,7 +43,6 @@ public class RegressionModelExecutor {
     public Instances initializeEmptyDataset() {
 
         ArrayList<Attribute> atts = new ArrayList<Attribute>();
-
         atts.add(new Attribute("commit", (ArrayList<String>)null));
 
         ArrayList<String> classVal = new ArrayList<String>();
@@ -101,56 +100,10 @@ public class RegressionModelExecutor {
         saver.save(dataSet);
     }
 
-    public Instances readTrainingSet() throws Exception{
-        BufferedReader reader = new BufferedReader(
-                new FileReader(new File(directory,path)));
-        Instances instances =  new Instances(reader);
-        instances.setClassIndex(instances.numAttributes() - 1);
-        return instances;
+    public TrainingSet readTrainingSet() throws Exception{
+        return reader.readTrainingSet();
     }
 
-    public Classifier train(Instances trainingSet) throws Exception{
-
-        StringToWordVector filter = new StringToWordVector();
-        filter.setInputFormat(trainingSet);
-
-        filter.setStemmer(new SnowballStemmer());
-        filter.setLowerCaseTokens(true);
-
-        //here we build the model
-        J48 j48 = new J48();
-        Remove rm = new Remove();
-        rm.setAttributeIndices("1");
-        j48.setUnpruned(true);
-        // meta-classifier
-        FilteredClassifier fc = new FilteredClassifier();
-        fc.setFilter(rm);
-        fc.setClassifier(j48);
-        fc.setFilter(filter);
-        // train and make predictions
-        fc.buildClassifier(trainingSet);
-        return fc;
-    }
-
-
-    public String infer(Classifier classifier, Instances trainingSet, String message) throws Exception {
-
-        Instances newDataset = initializeEmptyDataset();
-
-        double[] values = new double[newDataset.numAttributes()];
-        values[0] = newDataset.attribute(0).addStringValue(message);
-        values[1] = -1;
-
-        Instance instance = new DenseInstance(1.0, values);
-        newDataset.add(instance);
-        newDataset.setClassIndex(newDataset.numAttributes() - 1);
-        // evaluate classifier and print some statistics
-        Instance firstInstance = newDataset.firstInstance();
-
-        double prediction = classifier.classifyInstance(firstInstance);
-
-        return firstInstance.classAttribute().value((int) prediction);
-    }
 
     public void infer() throws Exception {
 
@@ -160,11 +113,10 @@ public class RegressionModelExecutor {
             LogCommand logCmd = git.log();
             Iterable<RevCommit> commits = logCmd.all().call();
             store();
-            Instances trainingSet = readTrainingSet();
-            Classifier fc = train(trainingSet);
+            TrainingSet trainingSet = readTrainingSet();
 
             for (RevCommit commit : commits) {
-                String category = infer(fc, trainingSet, commit.getFullMessage());
+                String category =trainingSet.infer(commit.getFullMessage());
                 System.out.println(commit.getName() + " " + category);
             }
         } finally {
@@ -173,25 +125,11 @@ public class RegressionModelExecutor {
 
     }
 
+
     public void evaluate() throws Exception {
        store();
-        Instances trainingSet = readTrainingSet();
-        Classifier fc = train(trainingSet);
-        int errors = 0;
-        for (int i = 0; i < trainingSet.numInstances(); i++) {
-            double pred = fc.classifyInstance(trainingSet.instance(i));
-            String actual = trainingSet.classAttribute().value((int) trainingSet.instance(i).classValue());
-            String predicted =  trainingSet.classAttribute().value((int) pred);
-
-            if(!actual.equals(predicted)){
-                errors++;
-            }
-
-            System.out.print("ID: " + trainingSet.instance(i).value(0));
-            System.out.print(", actual: " + actual);
-            System.out.println(", predicted: " + predicted);
-        }
-        System.out.println("Error ratio :"+ Double.toString((double)errors/ (double)trainingSet.numInstances()));
+        TrainingSet trainingSet = readTrainingSet();
+        trainingSet.evaluate();
     }
 
     public static void main(String[] args) throws Exception {

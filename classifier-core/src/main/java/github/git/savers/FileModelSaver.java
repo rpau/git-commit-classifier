@@ -1,4 +1,4 @@
-package github.git;
+package github.git.savers;
 
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;

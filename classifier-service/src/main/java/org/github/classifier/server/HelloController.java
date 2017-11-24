@@ -1,7 +1,7 @@
 package org.github.classifier.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import github.git.DatabaseModelSaver;
+import github.git.savers.DatabaseModelSaver;
 import github.git.RegressionModelExecutor;
 import org.eclipse.egit.github.core.*;
 import org.eclipse.egit.github.core.client.GitHubClient;
@@ -41,6 +41,7 @@ public class HelloController {
     System.out.println("RECEIVED!!! " + node.getNodeType());
     System.out.println(node.has("pull_request"));
     if (node.has("pull_request")) {
+
       onPullRequest(node);
     } else if (node.has("issue")) {
       onIssue(node);

@@ -3,7 +3,6 @@ package github.data;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import org.apache.commons.io.IOUtils;
-import org.apache.spark.mllib.regression.LabeledPoint;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.Repository;
@@ -24,7 +23,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +69,6 @@ public class GitHubCommitLoader {
         Map<String, String> filters = new HashMap<String, String>();
         filters.put("state", "closed");
         filters.put("labels", label); //,kind/feature,kind/enhancement
-        List<LabeledPoint> dataTraining = new LinkedList<LabeledPoint>();
         List<Issue> issues = srv.getIssues(repository, filters);
 
         try(CSVWriter writer = new CSVWriter(new FileWriter(new File("commits-"+label+".csv")))) {
