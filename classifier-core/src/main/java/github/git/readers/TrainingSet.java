@@ -1,5 +1,6 @@
 package github.git.readers;
 
+import github.git.AdhocKeywordsClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.meta.FilteredClassifier;
 import weka.classifiers.trees.J48;
@@ -12,6 +13,7 @@ import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.StringToWordVector;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 public class TrainingSet {
 
@@ -20,6 +22,8 @@ public class TrainingSet {
   private Classifier classifier;
 
   static String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
+
+  private static Map<String, AdhocKeywordsClassifier.Classification> classificationMap;
 
   public TrainingSet(Instances instances) {
     this.instances = instances;
@@ -53,6 +57,12 @@ public class TrainingSet {
   public String infer(String message) throws Exception {
 
     if (classifier == null) {
+      if (instances.size() < Integer.MAX_VALUE) {
+        if (classificationMap == null) {
+          classificationMap = AdhocKeywordsClassifier.getClassifications();
+        }
+        return AdhocKeywordsClassifier.classify(classificationMap, message);
+      }
       train();
     }
 
@@ -75,6 +85,7 @@ public class TrainingSet {
   public void evaluate() throws Exception {
 
     if (classifier == null) {
+
       train();
     }
 

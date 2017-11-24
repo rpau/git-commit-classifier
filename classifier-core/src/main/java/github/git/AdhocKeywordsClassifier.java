@@ -24,6 +24,8 @@ public class AdhocKeywordsClassifier {
 
     static Pattern pattern = Pattern.compile("Merge\\s+pull\\s+request\\s+#\\d+\\s+from\\s+\\w+/\\w+");
 
+    static String[] classifications = new String[] { "cleanups",  "bugs", "features", "release", "merge"};
+
     public static List<String> getKeywords(String name) throws Exception {
         List<String> result = new LinkedList<String>();
         InputStream is = AdhocKeywordsClassifier.class.getClassLoader()
@@ -54,6 +56,12 @@ public class AdhocKeywordsClassifier {
         public Classification(File directory, String name) throws Exception{
             this.name = name;
             writer = new CSVWriter(new FileWriter( new File(directory, name+".csv")));
+            keywords = getKeywords(name);
+            counter = 0;
+        }
+
+        public Classification(String name) throws Exception {
+            this.name = name;
             keywords = getKeywords(name);
             counter = 0;
         }
@@ -91,6 +99,36 @@ public class AdhocKeywordsClassifier {
             wordSet.add(word.trim());
         }
         return wordSet;
+    }
+
+    public static String classify( Map<String, Classification> classificationMap, String msg) throws Exception {
+
+        Set<String> wordSet = getWords(msg);
+
+        boolean matched = false;
+        for (String classification : classifications) {
+            Classification classif = classificationMap.get(classification);
+
+            if (classif.matches(wordSet)) {
+                return classification;
+            }
+        }
+        Classification classif = null;
+        if (wordSet.size() == 1 && wordSet.iterator().next().contains(".")) {
+            return "release";
+        } else {
+            return "features";
+        }
+
+    }
+
+    public static Map<String, Classification> getClassifications() throws Exception {
+        String[] classifications = new String[] { "cleanups",  "bugs", "features", "release", "merge"};
+        Map<String, Classification> classificationMap = new HashMap<>();
+        for (String classification : classifications) {
+            classificationMap.put(classification, new Classification(classification));
+        }
+        return classificationMap;
     }
 
     public static void main(String[] args) throws Exception {
