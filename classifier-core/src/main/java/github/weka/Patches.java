@@ -1,4 +1,4 @@
-package github.git;
+package github.weka;
 
 import difflib.Chunk;
 import difflib.Delta;

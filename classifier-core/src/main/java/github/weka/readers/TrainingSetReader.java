@@ -1,4 +1,4 @@
-package github.git.readers;
+package github.weka.readers;
 
 public interface TrainingSetReader {
 

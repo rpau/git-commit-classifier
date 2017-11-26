@@ -1,7 +1,7 @@
-package github.git;
+package github.weka;
 
-import github.git.readers.DatabaseTrainingSetReader;
-import github.git.savers.DatabaseModelSaver;
+import github.weka.readers.DatabaseTrainingSetReader;
+import github.weka.savers.DatabaseModelSaver;
 
 public class PostgresDemo {
 

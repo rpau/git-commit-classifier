@@ -1,4 +1,4 @@
-package github.git.readers;
+package github.weka.readers;
 
 import weka.core.Instances;
 

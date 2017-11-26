@@ -1,9 +1,9 @@
 package org.github.classifier.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import github.git.RegressionModelExecutor;
-import github.git.readers.FileTrainingSetReader;
-import github.git.savers.FileModelSaver;
+import github.weka.RegressionModelExecutor;
+import github.weka.readers.FileTrainingSetReader;
+import github.weka.savers.FileModelSaver;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.Label;
 import org.eclipse.egit.github.core.Repository;

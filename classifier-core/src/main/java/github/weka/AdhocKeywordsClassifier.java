@@ -1,4 +1,4 @@
-package github.git;
+package github.weka;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import org.eclipse.jgit.api.Git;

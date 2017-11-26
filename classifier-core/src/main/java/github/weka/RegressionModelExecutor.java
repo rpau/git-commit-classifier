@@ -1,12 +1,12 @@
-package github.git;
+package github.weka;
 
 
 import au.com.bytecode.opencsv.CSVReader;
-import github.git.readers.FileTrainingSetReader;
-import github.git.readers.TrainingSet;
-import github.git.readers.TrainingSetReader;
-import github.git.savers.FileModelSaver;
-import github.git.savers.ModelSaver;
+import github.weka.readers.FileTrainingSetReader;
+import github.weka.readers.TrainingSet;
+import github.weka.readers.TrainingSetReader;
+import github.weka.savers.FileModelSaver;
+import github.weka.savers.ModelSaver;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.revwalk.RevCommit;

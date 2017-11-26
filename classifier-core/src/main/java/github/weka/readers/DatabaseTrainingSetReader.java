@@ -1,4 +1,4 @@
-package github.git.readers;
+package github.weka.readers;
 
 import weka.core.DenseInstance;
 import weka.core.Instance;
@@ -10,8 +10,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 
-import static github.git.RegressionModelExecutor.getCategories;
-import static github.git.readers.TrainingSet.initializeEmptyDataset;
+import static github.weka.RegressionModelExecutor.getCategories;
+import static github.weka.readers.TrainingSet.initializeEmptyDataset;
 
 public class DatabaseTrainingSetReader implements TrainingSetReader {
 

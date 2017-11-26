@@ -1,4 +1,4 @@
-package github.git.savers;
+package github.weka.savers;
 
 import weka.core.Instances;
 

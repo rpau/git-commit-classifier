@@ -1,6 +1,6 @@
-package github.git.readers;
+package github.weka.readers;
 
-import github.git.AdhocKeywordsClassifier;
+import github.weka.AdhocKeywordsClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.meta.FilteredClassifier;
 import weka.classifiers.trees.J48;
