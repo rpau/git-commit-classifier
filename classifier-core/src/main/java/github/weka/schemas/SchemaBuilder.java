@@ -4,10 +4,14 @@ import github.weka.readers.InstancesReader;
 import github.weka.writers.FileInstancesWriter;
 import github.weka.writers.InstancesWriter;
 
+import java.util.stream.Stream;
+
 public class SchemaBuilder {
 
-  static String[] DEFAULT_CATEGORIES = new String[] {
-          "bugs", "features", "cleanups", "release", "merge"};
+  static String[] DEFAULT_CATEGORIES =
+          Stream.of(Category.values())
+          .map(Category::getText)
+          .toArray(String[]::new);
 
   InstancesReader reader;
 
