@@ -4,20 +4,26 @@ import weka.core.Instances;
 import weka.core.converters.DatabaseSaver;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 public class DatabaseInstancesWriter implements InstancesWriter {
 
-  DatabaseSaver save;
+  private DatabaseSaver save;
 
-  String host = "192.168.99.100";
-
-  public boolean connected = false;
+  private boolean connected = false;
 
   public DatabaseInstancesWriter() throws Exception {
     save = new DatabaseSaver();
-    save.setUrl("jdbc:postgresql://"+host+":5432/postgres");
-    save.setUser("postgres");
-    save.setPassword("mysecretpassword");
+    Properties prop = new Properties();
+
+    try(InputStream input = DatabaseInstancesWriter.class.getClassLoader()
+            .getResourceAsStream("postgres.properties")) {
+      prop.load(input);
+      save.setUrl("jdbc:postgresql://" + prop.getProperty("host") + ":5432/postgres");
+      save.setUser(prop.getProperty("user"));
+      save.setPassword(prop.getProperty("pwd"));
+    }
 
   }
 
