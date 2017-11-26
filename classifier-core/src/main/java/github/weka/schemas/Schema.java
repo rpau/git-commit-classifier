@@ -1,4 +1,4 @@
-package github.weka.readers;
+package github.weka.schemas;
 
 import github.weka.AdhocKeywordsClassifier;
 import weka.classifiers.Classifier;
@@ -12,61 +12,95 @@ import weka.core.stemmers.SnowballStemmer;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.StringToWordVector;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
-public class TrainingSet {
+public class Schema {
 
-  private Instances instances;
+  private final Instances instances;
 
-  private Classifier classifier;
+  private final List<String> categories;
 
-  static String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
+  private final SchemaBuilder builder;
 
   private static Map<String, AdhocKeywordsClassifier.Classification> classificationMap;
 
-  public TrainingSet(Instances instances) {
-    this.instances = instances;
+  private Classifier classifier;
 
-    if (instances.classIndex() == -1) {
-      instances.setClassIndex(instances.numAttributes() - 1);
+  Schema(SchemaBuilder builder) {
+    this.builder = builder;
+    this.instances = emptySchema();
+    this.categories = Arrays.asList(builder.categories);
+  }
+
+  private Instances emptySchema() {
+    ArrayList<Attribute> atts = new ArrayList<Attribute>();
+    atts.add(new Attribute("commit", (ArrayList<String>)null));
+
+    ArrayList<String> classVal = new ArrayList<String>();
+    for(String category: builder.categories){
+      classVal.add(category);
     }
+    atts.add(new Attribute("s_label", classVal));
+
+    Instances dataSet = new Instances("commits", atts, 1);
+    dataSet.setClassIndex(1);
+    return  dataSet;
+  }
+
+  Schema(Instances instances, SchemaBuilder builder) {
+    this.instances = instances;
+    this.builder = builder;
+    this.categories = Arrays.asList(builder.categories);
   }
 
   public Instances toInstances() {
     return instances;
   }
 
-  public static Instances initializeEmptyDataset() {
+  public void train(String text, String category) {
+    train(instances, text, category);
+  }
 
-    ArrayList<Attribute> atts = new ArrayList<Attribute>();
-    atts.add(new Attribute("commit", (ArrayList<String>)null));
+  private void train(Instances instances, String text, String category) {
+    int categoryId = categories.indexOf(category);
+    double[] values = new double[instances.numAttributes()];
+    values[0] = instances.attribute(0).addStringValue(text);
+    values[1] = categoryId;
+    Instance instance = new DenseInstance(1.0, values);
+    instances.add(instance);
+  }
 
-    ArrayList<String> classVal = new ArrayList<String>();
-    for(String category: categories){
-      classVal.add(category);
+  public void put(String text, String category) throws IOException {
+    train(text, category);
+
+    Instances instances = emptySchema();
+    train(instances,text, category);
+    if (builder.saver != null) {
+      builder.saver.write(instances);
     }
+  }
 
-    atts.add(new Attribute("s_label", classVal));
-    Instances dataSet = new Instances("commits", atts, 1);
-    dataSet.setClassIndex(1);
-
-    return dataSet;
+  public void flush() throws IOException {
+    if (builder.saver != null) {
+      builder.saver.write(null);
+    }
   }
 
   public String infer(String message) throws Exception {
-
     if (classifier == null) {
-      /*if (instances.size() < Integer.MAX_VALUE) {
+      if (instances.size() < 100) {
         if (classificationMap == null) {
           classificationMap = AdhocKeywordsClassifier.getClassifications();
         }
         return AdhocKeywordsClassifier.classify(classificationMap, message);
-      }*/
+      }
       train();
     }
-
-    Instances newDataset = initializeEmptyDataset();
+    Instances newDataset = emptySchema();
 
     double[] values = new double[newDataset.numAttributes()];
     values[0] = newDataset.attribute(0).addStringValue(message);
@@ -82,12 +116,10 @@ public class TrainingSet {
     return firstInstance.classAttribute().value((int) prediction);
   }
 
-  public void evaluate() throws Exception {
-
+  public void inferAll() throws Exception {
     if (classifier == null) {
       train();
     }
-
     int errors = 0;
     for (int i = 0; i < instances.numInstances(); i++) {
       double pred = classifier.classifyInstance(instances.instance(i));
@@ -104,7 +136,6 @@ public class TrainingSet {
     }
     System.out.println("Error ratio :"+ Double.toString((double)errors/ (double)instances.numInstances()));
   }
-
 
   private void train() throws Exception{
     StringToWordVector filter = new StringToWordVector();
@@ -128,4 +159,7 @@ public class TrainingSet {
     classifier = fc;
   }
 
+  public List<String> getCategories() {
+    return categories;
+  }
 }

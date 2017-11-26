@@ -1,26 +1,27 @@
 package github.weka;
 
-import github.weka.readers.DatabaseTrainingSetReader;
-import github.weka.savers.DatabaseModelSaver;
+import github.weka.readers.DatabaseInstancesReader;
+import github.weka.writers.DatabaseInstancesWriter;
+import github.weka.schemas.Schema;
+import github.weka.schemas.SchemaBuilder;
 
 public class PostgresDemo {
 
   public static void main(String[] args) throws Exception {
 
-    DatabaseModelSaver saver = new DatabaseModelSaver();
-    DatabaseTrainingSetReader reader = new DatabaseTrainingSetReader();
+    Schema schema = SchemaBuilder.from(new DatabaseInstancesReader())
+            .withSaver(new DatabaseInstancesWriter())
+            .build();
 
-    RegressionModelExecutor executor = new RegressionModelExecutor(saver);
-    for (int i = 0; i < 1000; i++) {
-      executor.store("features", "features");
-      executor.store("bugs", "bugs");
-      executor.store("cleanups", "cleanups");
-      executor.store("release", "release");
-      executor.store("merge", "merge");
-
+    for (int i = 0; i < 200; i++) {
+      schema.put("features", "features");
+      schema.put("bugs", "bugs");
+      schema.put("cleanups", "cleanups");
+      schema.put("release", "release");
+      schema.put("merge", "merge");
     }
-    executor.close();
+    schema.flush();
 
-    System.out.println(reader.readTrainingSet().infer("features"));
+    System.out.println(schema.infer("bugs"));
   }
 }

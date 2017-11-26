@@ -1,9 +1,10 @@
 package org.github.classifier.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import github.weka.RegressionModelExecutor;
-import github.weka.readers.FileTrainingSetReader;
-import github.weka.savers.FileModelSaver;
+import github.weka.readers.DatabaseInstancesReader;
+import github.weka.schemas.Schema;
+import github.weka.schemas.SchemaBuilder;
+import github.weka.writers.DatabaseInstancesWriter;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.Label;
 import org.eclipse.egit.github.core.Repository;
@@ -23,9 +24,7 @@ public class HelloController {
 
   GitHubClient client;
 
-  FileModelSaver saver;
-  RegressionModelExecutor executor;
-  FileTrainingSetReader reader;
+  Schema schema;
   HashMap<String, Label> categoryLabel;
 
   private final Label bug = new Label().setName("classifier:bug").setColor("ee0701");
@@ -37,9 +36,9 @@ public class HelloController {
   public HelloController() throws Exception {
     client = new GitHubClient("github.schibsted.io");
     client.setOAuth2Token("");
-    saver = new FileModelSaver();
-    reader = new FileTrainingSetReader();
-    executor = new RegressionModelExecutor(saver);
+    schema = SchemaBuilder.from(new DatabaseInstancesReader())
+            .withSaver(new DatabaseInstancesWriter())
+            .build();
     categoryLabel = new HashMap<>();
     categoryLabel.put("bugs", bug);
     categoryLabel.put("features", feature);
@@ -83,7 +82,7 @@ public class HelloController {
                 .forEach((Label l) -> {
                   String category = l.getName().split(":")[1];
                   try {
-                    executor.store(title + body, category);
+                    schema.put(title + body, category);
                   } catch (IOException e) {
                     e.printStackTrace();
                   }
@@ -93,7 +92,7 @@ public class HelloController {
       }
     } else if (action.equals("opened")) {
       // It's an open pull request, let's try to infer what it is.
-      String category = reader.readTrainingSet().infer(title);
+      String category = schema.infer(title);
       addCategoryLabel(repository, prNumber, category);
     } else {
       System.out.println("Ignoring event, not a merge action -> " + node);

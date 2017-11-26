@@ -1,11 +1,11 @@
-package github.weka.savers;
+package github.weka.writers;
 
 import weka.core.Instances;
 import weka.core.converters.DatabaseSaver;
 
 import java.io.IOException;
 
-public class DatabaseModelSaver implements ModelSaver{
+public class DatabaseInstancesWriter implements InstancesWriter {
 
   DatabaseSaver save;
 
@@ -13,7 +13,7 @@ public class DatabaseModelSaver implements ModelSaver{
 
   public boolean connected = false;
 
-  public DatabaseModelSaver() throws Exception {
+  public DatabaseInstancesWriter() throws Exception {
     save = new DatabaseSaver();
     save.setUrl("jdbc:postgresql://"+host+":5432/postgres");
     save.setUser("postgres");
@@ -22,14 +22,12 @@ public class DatabaseModelSaver implements ModelSaver{
   }
 
   @Override
-  public void save(Instances dataSet) throws IOException {
+  public void write(Instances dataSet) throws IOException {
     if (!connected) {
       save.setStructure(dataSet);
       connected = true;
       save.connectToDatabase();
     }
-    //save.setRelationForTableName(false);
-    //save.setTableName("commits");
     if (dataSet != null) {
       int max = dataSet.size();
       for (int i = 0; i < max; i++) {

@@ -1,4 +1,4 @@
-package github.weka.savers;
+package github.weka.writers;
 
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
@@ -8,14 +8,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class FileModelSaver implements ModelSaver {
+public class FileInstancesWriter implements InstancesWriter {
   private ArffSaver saver = new ArffSaver();
   private String path = "training.arff";
   private boolean init = false;
 
   private FileOutputStream fos;
 
-  public FileModelSaver() {
+  public FileInstancesWriter() {
     try {
       fos = new FileOutputStream(new File(path).getAbsoluteFile(), true);
 
@@ -28,7 +28,7 @@ public class FileModelSaver implements ModelSaver {
     }
   }
   @Override
-  public void save(Instances dataSet) throws IOException {
+  public void write(Instances dataSet) throws IOException {
     if (!init) {
       saver.setStructure(dataSet);
       init = true;
