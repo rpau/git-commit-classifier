@@ -147,7 +147,8 @@ public class Schema {
   }
 
   private void train() throws Exception {
-    if (classifier == null || updates % LIMIT_UPDATES_WITHOUT_TRAINING == 0) {
+    if (classifier == null ||
+            (updates % LIMIT_UPDATES_WITHOUT_TRAINING == 0 && updates > 0)) {
       StringToWordVector filter = new StringToWordVector();
       filter.setInputFormat(instances);
 
