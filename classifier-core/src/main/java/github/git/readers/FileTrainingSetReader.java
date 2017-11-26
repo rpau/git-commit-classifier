@@ -10,12 +10,11 @@ import java.io.IOException;
 public class FileTrainingSetReader implements TrainingSetReader {
 
   private String path = "training.arff";
-  File directory = new File("/Users/raquel.pau/rocket/rkt-clads-api");
 
   @Override
   public TrainingSet readTrainingSet() throws IOException {
     BufferedReader reader = new BufferedReader(
-            new FileReader(new File(directory,path)));
+            new FileReader(new File(path)));
     Instances instances =  new Instances(reader);
     return new TrainingSet(instances);
   }

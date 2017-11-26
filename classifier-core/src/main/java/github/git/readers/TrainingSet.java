@@ -37,7 +37,7 @@ public class TrainingSet {
     return instances;
   }
 
-  private Instances initializeEmptyDataset() {
+  public static Instances initializeEmptyDataset() {
 
     ArrayList<Attribute> atts = new ArrayList<Attribute>();
     atts.add(new Attribute("commit", (ArrayList<String>)null));
@@ -57,12 +57,12 @@ public class TrainingSet {
   public String infer(String message) throws Exception {
 
     if (classifier == null) {
-      if (instances.size() < Integer.MAX_VALUE) {
+      /*if (instances.size() < Integer.MAX_VALUE) {
         if (classificationMap == null) {
           classificationMap = AdhocKeywordsClassifier.getClassifications();
         }
         return AdhocKeywordsClassifier.classify(classificationMap, message);
-      }
+      }*/
       train();
     }
 
@@ -85,7 +85,6 @@ public class TrainingSet {
   public void evaluate() throws Exception {
 
     if (classifier == null) {
-
       train();
     }
 

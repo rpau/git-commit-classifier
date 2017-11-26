@@ -11,13 +11,16 @@ public class PostgresDemo {
     DatabaseTrainingSetReader reader = new DatabaseTrainingSetReader();
 
     RegressionModelExecutor executor = new RegressionModelExecutor(saver);
-    /*for (int i = 0; i < 100; i++) {
-      executor.store("tests", "features");
-      executor.store("fix", "bugs");
+    for (int i = 0; i < 1000; i++) {
+      executor.store("features", "features");
+      executor.store("bugs", "bugs");
       executor.store("cleanups", "cleanups");
       executor.store("release", "release");
       executor.store("merge", "merge");
-    }*/
-    System.out.println(reader.readTrainingSet().infer("style fix"));
+
+    }
+    executor.close();
+
+    System.out.println(reader.readTrainingSet().infer("features"));
   }
 }

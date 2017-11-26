@@ -30,9 +30,11 @@ public class DatabaseModelSaver implements ModelSaver{
     }
     //save.setRelationForTableName(false);
     //save.setTableName("commits");
-    int max = dataSet.size();
-    for (int i = 0; i < max; i++) {
-      save.writeIncremental(dataSet.get(i));
+    if (dataSet != null) {
+      int max = dataSet.size();
+      for (int i = 0; i < max; i++) {
+        save.writeIncremental(dataSet.get(i));
+      }
     }
   }
 

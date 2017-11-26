@@ -20,6 +20,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class RegressionModelExecutor {
 
@@ -27,7 +28,7 @@ public class RegressionModelExecutor {
 
     File directory = new File("/Users/raquel.pau/rocket/rkt-clads-api");
 
-    String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
+    static String[] categories = new String[] {"bugs", "features", "cleanups", "release", "merge"};
 
     private ModelSaver saver = new FileModelSaver();
 
@@ -89,8 +90,12 @@ public class RegressionModelExecutor {
 
     }
 
+    public static List<String> getCategories() {
+        return Arrays.asList(categories);
+    }
+
     public void store(String text, String category) throws IOException {
-        int categoryId = Arrays.asList(categories).indexOf(category);
+        int categoryId = getCategories().indexOf(category);
         Instances dataSet = initializeEmptyDataset();
         double[] values = new double[dataSet.numAttributes()];
         values[0] = dataSet.attribute(0).addStringValue(text);
@@ -98,6 +103,10 @@ public class RegressionModelExecutor {
         Instance instance = new DenseInstance(1.0, values);
         dataSet.add(instance);
         saver.save(dataSet);
+    }
+
+    public void close() throws IOException{
+        saver.save(null);
     }
 
     public TrainingSet readTrainingSet() throws Exception{
