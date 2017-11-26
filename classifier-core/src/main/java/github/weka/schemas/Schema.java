@@ -171,8 +171,4 @@ public class Schema {
       updates = 0;
     }
   }
-
-  public List<String> getCategories() {
-    return categories;
-  }
 }
